@@ -13,5 +13,4 @@ add_library(neat include/neat.h include/neat_genomes.h include/gene_pool.h
 
 target_include_directories(neat PUBLIC include ${GA_INCLUDE_DIR} ${NETWORK_INCLUDE_DIR})
 
-
 add_subdirectory(NEAT_test)

@@ -11,8 +11,13 @@ neat::neat(const neat_config &config) : algo(create_ga_config(config)), config(c
 
 }
 
+void neat::run() {
+    algo.run();
+}
+
 namespace {
     genetic::ga_config<network_information> create_ga_config(const neat_config& config) {
+        using individual_t = genetic::ga<network_information>::individual_t;
         genetic::ga_config<network_information> gconfig;
         gconfig.population = config.population;
         gconfig.epoch = config.epoch;
@@ -20,10 +25,35 @@ namespace {
         gconfig.fitness_min = config.fitness_min;
         gconfig.scale = [](float x) { return x * x; };
         gconfig.select = genetic::elite<network_information>{ 3 };
-        gconfig.step = config.step;
+        gconfig.step = [step = config.step](const std::vector<individual_t>& d) -> std::vector<float> {
+            std::vector<float> f;
+            for(const auto& i : d) {
+                const auto& ni = std::get<0>(i);
+                network_config config;
+                config.node_count = ni.node_num;
+                config.input_count = ni.input_num;
+                config.output_count = ni.output_num;
+                config.connection_count = std::count_if(ni.conns.begin(), ni.conns.end(),
+                        [](const auto& c) { return c.enable; });
+                std::transform(ni.nodes.begin(), ni.nodes.end(), std::back_inserter(config.bias),
+                        [](const auto& n) { return n.bias; });
+                std::transform(ni.nodes.begin(), ni.nodes.end(), std::back_inserter(config.activations),
+                               [](const auto& n) { return n.activation_function; });
+                std::transform(ni.conns.begin(), ni.conns.end(), std::back_inserter(config.weight),
+                        [](const auto& c) { return c.weight; });
+
+                std::transform(ni.conns.begin(), ni.conns.end(), std::back_inserter(config.connection_rule),
+                        [](const auto& c) { return c.enable ? std::make_pair(c.in - 1, c.out - 1) : std::make_pair(0u, 0u); });
+                auto iter = std::remove_if(config.connection_rule.begin(), config.connection_rule.end(),
+                        [](auto&& p) { return p.first == 0 && p.second == 0; });
+                config.connection_rule.erase(iter, config.connection_rule.end());
+                network n(config);
+                f.push_back(step(n));
+            }
+            return f;
+        };
         gconfig.callback = config.callback;
         std::weak_ptr<gene_pool> weak = config.pool;
-        using individual_t = genetic::ga<network_information>::individual_t;
         gconfig.initializer = [weak, config]() -> individual_t {
             auto d = std::make_tuple(network_information{});
             auto& n = std::get<0>(d);

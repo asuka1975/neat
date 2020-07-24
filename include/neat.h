@@ -10,6 +10,7 @@
 #include <vector>
 #include "gene_pool.h"
 #include "genetic.h"
+#include "network.h"
 
 struct neat_config {
     std::uint32_t num_hidden;
@@ -38,13 +39,14 @@ struct neat_config {
     std::uint32_t epoch;
 
     std::shared_ptr<gene_pool> pool;
-    std::function<std::vector<float>(const std::vector<genetic::ga<network_information>::individual_t>&)> step;
+    std::function<float(network&)> step;
     std::function<void(const std::vector<genetic::ga<network_information>::individual_t>&, const std::vector<float>&)> callback;
 };
 
 class neat {
 public:
-    neat(const neat_config& config);
+    explicit neat(const neat_config& config);
+    void run();
 private:
     neat_config config;
     genetic::ga<network_information> algo;
