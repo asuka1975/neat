@@ -13,6 +13,8 @@ namespace {
                 std::vector<std::function<float(float)>>{
             [](float x) { return 1.0f / (1.0f - std::exp(-x)); }
         });
+        config.population = 20;
+        config.epoch = 100;
         config.num_inputs = 2;
         config.num_outputs = 1;
         config.num_hidden = 3;
@@ -45,6 +47,8 @@ namespace {
             float sum = std::accumulate(f.begin(), f.end(), 0.0f) / f.size();
             std::cout << sum << std::endl;
         };
+        neat n(config);
+        n.run();
     }
 }
 
