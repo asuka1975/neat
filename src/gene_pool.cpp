@@ -23,6 +23,8 @@ void gene_pool::init_gene(network_information &gene, std::uint32_t node_num, std
     for(auto i = 0; i < node_num; i++) {
         gene.nodes[i].id = i + 1;
         gene.nodes[i].bias = random_generator::random_normal<float>(bias_init_mean, bias_init_stdev);
+        auto j = random_generator::random<std::size_t>() % activation_functions.size();
+        gene.nodes[i].activation_function = activation_functions[j];
     }
 }
 

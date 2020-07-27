@@ -43,7 +43,7 @@ namespace {
                         [](const auto& c) { return c.weight; });
 
                 std::transform(ni.conns.begin(), ni.conns.end(), std::back_inserter(config.connection_rule),
-                        [](const auto& c) { return c.enable ? std::make_pair(c.in - 1, c.out - 1) : std::make_pair(0u, 0u); });
+                        [](const auto& c) { return c.enable ? std::make_pair(c.in, c.out) : std::make_pair(0u, 0u); });
                 auto iter = std::remove_if(config.connection_rule.begin(), config.connection_rule.end(),
                         [](auto&& p) { return p.first == 0 && p.second == 0; });
                 config.connection_rule.erase(iter, config.connection_rule.end());
