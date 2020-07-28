@@ -11,7 +11,7 @@ namespace {
         neat_config config;
         config.pool = std::make_shared<gene_pool>(0.0f, 1.0f,
                 std::vector<std::function<float(float)>>{
-            [](float x) { return 1.0f / (1.0f - std::exp(-x)); }
+            [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
         });
         config.population = 20;
         config.epoch = 100;
@@ -27,8 +27,8 @@ namespace {
         config.bias_mutate_rate = 0.1;
         config.enable_mutate_rate = 0.02;
         config.activation_mutate_rate = 0;
-        config.node_add_prob = 0;
-        config.node_delete_prob = 0;
+        config.node_add_prob = 0.025;
+        config.node_delete_prob = 0.01;
         config.conn_add_prob = 0.05;
         config.conn_delete_prob = 0.05;
         config.step = [](network& n) -> float {

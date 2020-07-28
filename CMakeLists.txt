@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(NEAT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(GA_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/genetic-algorithm/include)
 set(NETWORK_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/network/include)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 enable_testing()
 

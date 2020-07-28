@@ -38,7 +38,7 @@ void gene_pool::add_node(network_information &gene) {
 
     std::vector<std::size_t> indexes;
     for(auto i = 0; i < gene.conns.size(); i++) if(gene.conns[i].enable) indexes.push_back(i);
-    auto j = indexes[random_generator::random_uniform<std::size_t>(0, indexes.size())];
+    auto j = indexes[random_generator::random<std::size_t>() % indexes.size()];
     gene.conns[j].enable = false;
 
     gene.conns.push_back(connection { push_gene(gene.conns[j].in, node_count), gene.conns[j].in, node_count,
@@ -70,8 +70,8 @@ void gene_pool::add_connection(network_information &gene) {
     }
 
     auto iter = std::remove_if(conn_pair.begin(), conn_pair.end(), [&conns = gene.conns](auto&& p) {
-        return std::find_if(conns.begin(), conns.end(), [&p](auto&& c) {
-            return c.in = p.first && c.out == p.second;
+        return std::find_if(conns.begin(), conns.end(), [&p](auto&& c) -> bool {
+            return c.in == p.first && c.out == p.second;
         }) != conns.end();
     });
 
@@ -85,6 +85,7 @@ void gene_pool::add_connection(network_information &gene) {
         if(c.id > id) break;
         j++;
     }
+    auto p = conn_pair[idx];
     auto weight = random_generator::random_uniform<float>(-1.0, 1.0);
     gene.conns.insert(gene.conns.begin() + j,
             connection { id, conn_pair[idx].first, conn_pair[idx].second, weight, true });

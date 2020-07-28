@@ -41,9 +41,13 @@ namespace {
                                [](const auto& n) { return n.activation_function; });
                 std::transform(ni.conns.begin(), ni.conns.end(), std::back_inserter(config.weight),
                         [](const auto& c) { return c.weight; });
+                std::map<std::uint32_t, std::uint32_t> id_to_index;
+                for(auto i = 0; i < ni.nodes.size(); i++) id_to_index[ni.nodes[i].id] = i;
 
                 std::transform(ni.conns.begin(), ni.conns.end(), std::back_inserter(config.connection_rule),
-                        [](const auto& c) { return c.enable ? std::make_pair(c.in, c.out) : std::make_pair(0u, 0u); });
+                        [&id_to_index](const auto& c) {
+                    return c.enable ? std::make_pair(id_to_index[c.in], id_to_index[c.out]) : std::make_pair(0u, 0u);
+                });
                 auto iter = std::remove_if(config.connection_rule.begin(), config.connection_rule.end(),
                         [](auto&& p) { return p.first == 0 && p.second == 0; });
                 config.connection_rule.erase(iter, config.connection_rule.end());
