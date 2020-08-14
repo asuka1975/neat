@@ -22,6 +22,7 @@ struct neat_config {
     float bias_init_mean = 0.0f;
     float bias_init_stdev = 1.0f;
     std::vector<std::function<float(float)>> activation_functions;
+    std::uint32_t elitism = 1;
 
     float node_add_prob;
     float node_delete_prob;

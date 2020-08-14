@@ -14,7 +14,7 @@ namespace {
             [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
         });
         config.population = 20;
-        config.epoch = 100;
+        config.epoch = 1000;
         config.num_inputs = 2;
         config.num_outputs = 1;
         config.num_hidden = 3;
@@ -23,8 +23,8 @@ namespace {
         config.fitness_min = 0.0f;
         config.fitness_max = 4.0f;
 
-        config.weight_mutate_rate = 0.2;
-        config.bias_mutate_rate = 0.1;
+        config.weight_mutate_rate = 0.1;
+        config.bias_mutate_rate = 0.05;
         config.enable_mutate_rate = 0.02;
         config.activation_mutate_rate = 0;
         config.node_add_prob = 0.025;
@@ -44,8 +44,10 @@ namespace {
             return f;
         };
         config.callback = [](const std::vector<genetic::ga<network_information>::individual_t>&, const std::vector<float>& f) {
-            float sum = std::accumulate(f.begin(), f.end(), 0.0f) / f.size();
-            std::cout << sum << std::endl;
+            float average = std::accumulate(f.begin(), f.end(), 0.0f) / f.size();
+            float max = *std::max_element(f.begin(), f.end());
+            float min = *std::min_element(f.begin(), f.end());
+            std::cout << average << " " << max << " " << min << std::endl;
         };
         neat n(config);
         n.run();

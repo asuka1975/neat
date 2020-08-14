@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/genetic-algorithm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/network" vcs="Git" />
   </component>
 </project>
