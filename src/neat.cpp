@@ -24,7 +24,7 @@ namespace {
         gconfig.fitness_max = config.fitness_max;
         gconfig.fitness_min = config.fitness_min;
         gconfig.scale = [](float x) { return x * x; };
-        gconfig.select = genetic::elite<network_information>{ 3 };
+        gconfig.select = genetic::elite<network_information>{ config.elitism };
         gconfig.step = [step = config.step](const std::vector<individual_t>& d) -> std::vector<float> {
             std::vector<float> f;
             for(const auto& i : d) {
