@@ -6,6 +6,7 @@
 #define NEAT_NEAT_GENOMES_H
 
 #include <functional>
+#include "network.h"
 
 struct node {
     std::uint32_t id;
@@ -22,11 +23,13 @@ struct connection {
 };
 
 struct network_information {
+    using expression_t = network;
     std::uint32_t node_num;
     std::uint32_t input_num;
     std::uint32_t output_num;
     std::vector<node> nodes;
     std::vector<connection> conns;
+    static network_information crossover(const network_information& d1, const network_information& d2);
 };
 
 namespace genetic {

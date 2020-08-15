@@ -14,7 +14,7 @@ namespace {
             [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
         });
         config.population = 20;
-        config.epoch = 1000;
+        config.epoch = 100;
         config.num_inputs = 2;
         config.num_outputs = 1;
         config.num_hidden = 3;
@@ -31,26 +31,32 @@ namespace {
         config.node_delete_prob = 0.01;
         config.conn_add_prob = 0.05;
         config.conn_delete_prob = 0.05;
-        config.step = [](network& n) -> float {
-            float f = 0;
-            n.input(std::vector<float> { 1.0f, 1.0f });
-            f += 1.0f - n.get_outputs()[0];
-            n.input(std::vector<float> { 1.0f, 0.0f });
-            f += n.get_outputs()[0];
-            n.input(std::vector<float> { 0.0f, 1.0f });
-            f += n.get_outputs()[0];
-            n.input(std::vector<float> { 0.0f, 0.0f });
-            f += 1.0f - n.get_outputs()[0];
+        genetic::ga_config<network_information> gconfig;
+        configure_neat<0>(config, gconfig);
+        gconfig.step = [](const std::vector<genetic::ga_config<network_information>::expression_t>& p) {
+            std::vector<float> f;
+            for(auto e : p) {
+                f.push_back(0.0f);
+                auto n = std::get<0>(e);
+                n.input(std::vector<float> { 1.0f, 1.0f });
+                f.back() += 1.0f - n.get_outputs()[0];
+                n.input(std::vector<float> { 1.0f, 0.0f });
+                f.back() += n.get_outputs()[0];
+                n.input(std::vector<float> { 0.0f, 1.0f });
+                f.back() += n.get_outputs()[0];
+                n.input(std::vector<float> { 0.0f, 0.0f });
+                f.back() += 1.0f - n.get_outputs()[0];
+            }
             return f;
         };
-        config.callback = [](const std::vector<genetic::ga<network_information>::individual_t>&, const std::vector<float>& f) {
+        gconfig.callback = [](const std::vector<genetic::ga_config<network_information>::expression_t>&, const std::vector<float>& f) {
             float average = std::accumulate(f.begin(), f.end(), 0.0f) / f.size();
             float max = *std::max_element(f.begin(), f.end());
             float min = *std::min_element(f.begin(), f.end());
             std::cout << average << " " << max << " " << min << std::endl;
         };
-        neat n(config);
-        n.run();
+        genetic::ga<network_information> ga(gconfig);
+        ga.run();
     }
 }
 
