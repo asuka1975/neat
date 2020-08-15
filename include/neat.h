@@ -52,6 +52,7 @@ void configure_neat(const neat_config& config, genetic::ga_config<TArgs...>& gco
     gconfig.epoch = config.epoch;
     gconfig.fitness_max = config.fitness_max;
     gconfig.fitness_min = config.fitness_min;
+    gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
     gconfig.select = genetic::elite<network_information>{ config.elitism };
     std::get<I>(gconfig.express) = [](const network_information& ni) {
