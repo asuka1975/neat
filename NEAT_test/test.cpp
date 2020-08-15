@@ -18,7 +18,7 @@ namespace {
         config.num_inputs = 2;
         config.num_outputs = 1;
         config.num_hidden = 3;
-        config.num_init_conns = 10;
+        config.num_init_conns = 5;
 
         config.fitness_min = 0.0f;
         config.fitness_max = 4.0f;
@@ -27,9 +27,9 @@ namespace {
         config.bias_mutate_rate = 0.05;
         config.enable_mutate_rate = 0.02;
         config.activation_mutate_rate = 0;
-        config.node_add_prob = 0.025;
-        config.node_delete_prob = 0.01;
-        config.conn_add_prob = 0.05;
+        config.node_add_prob = 0.0f;
+        config.node_delete_prob = 0.0f;
+        config.conn_add_prob = 0.01;
         config.conn_delete_prob = 0.05;
         genetic::ga_config<network_information> gconfig;
         configure_neat<0>(config, gconfig);
@@ -49,7 +49,7 @@ namespace {
             }
             return f;
         };
-        gconfig.callback = [](const std::vector<genetic::ga_config<network_information>::expression_t>&, const std::vector<float>& f) {
+        gconfig.callback = [](const std::vector<genetic::ga_config<network_information>::expression_t>& e, const std::vector<float>& f) {
             float average = std::accumulate(f.begin(), f.end(), 0.0f) / f.size();
             float max = *std::max_element(f.begin(), f.end());
             float min = *std::min_element(f.begin(), f.end());
