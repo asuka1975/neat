@@ -9,10 +9,6 @@
 namespace {
     TEST(NEAT_BEHAVIOR_TEST, TEST1) {
         neat_config config;
-        config.pool = std::make_shared<gene_pool>(0.0f, 1.0f,
-                std::vector<std::function<float(float)>>{
-            [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
-        });
         config.population = 20;
         config.epoch = 100;
         config.num_inputs = 2;
@@ -31,6 +27,13 @@ namespace {
         config.node_delete_prob = 0.0f;
         config.conn_add_prob = 0.01;
         config.conn_delete_prob = 0.05;
+
+        config.bias_init_mean = 0.0f;
+        config.bias_init_stdev = 1.0f;
+        config.activation_functions = std::vector<std::function<float(float)>>{
+                [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
+        };
+
         genetic::ga_config<network_information> gconfig;
         configure_neat<0>(config, gconfig);
         gconfig.step = [](const std::vector<genetic::ga_config<network_information>::expression_t>& p) {
