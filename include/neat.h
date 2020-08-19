@@ -11,6 +11,8 @@
 #include "gene_pool.h"
 #include "genetic.h"
 #include "network.h"
+#include "recurrent.h"
+#include "feedforward.h"
 
 struct neat_config {
     std::uint32_t num_hidden;
@@ -39,6 +41,8 @@ struct neat_config {
     std::uint32_t population;
     std::uint32_t epoch;
 
+    bool is_feedforward = true;
+
     std::unique_ptr<gene_pool> pool;
 };
 
@@ -48,8 +52,12 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
     static_assert(std::is_same_v<std::tuple_element_t<I, std::tuple<TArgs...>>, network_information>,
             "selected type must be network_information");
     using individual_t = typename genetic::ga<TArgs...>::individual_t;
-    config.pool = std::make_unique<gene_pool>(config.bias_init_mean, config.bias_init_stdev,
-            config.activation_functions);
+    if(config.is_feedforward) {
+        config.pool = std::make_unique<feedforward_gene_pool>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
+    } else {
+        config.pool = std::make_unique<gene_pool>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
+    }
+
     gconfig.population = config.population;
     gconfig.epoch = config.epoch;
     gconfig.fitness_max = config.fitness_max;
@@ -57,34 +65,31 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
     gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
     gconfig.select = genetic::elite<network_information>{ config.elitism };
-    std::get<I>(gconfig.express) = [](const network_information& ni) {
+    std::get<I>(gconfig.express) = [is_feedforward=config.is_feedforward](const network_information& ni)
+            -> std::shared_ptr<network> {
         network_config config;
-        config.node_count = ni.node_num;
-        config.input_count = ni.input_num;
-        config.output_count = ni.output_num;
-        config.connection_count = std::count_if(ni.conns.begin(), ni.conns.end(),
-                                                [](const auto& c) { return c.enable; });
-        config.bias.resize(ni.nodes.size());
-        config.activations.resize(ni.nodes.size());
-        config.weight.resize(ni.conns.size());
-        std::transform(ni.nodes.begin(), ni.nodes.end(), config.bias.begin(),
-                       [](const auto& n) { return n.bias; });
-        std::transform(ni.nodes.begin(), ni.nodes.end(), config.activations.begin(),
-                       [](const auto& n) { return n.activation_function; });
-        std::transform(ni.conns.begin(), ni.conns.end(), config.weight.begin(),
-                       [](const auto& c) { return c.weight; });
+        config.input_num = ni.input_num;
+        config.output_num = ni.output_num;
+        config.conn.resize(ni.conns.size());
+        config.node.resize(ni.nodes.size());
         std::map<std::uint32_t, std::uint32_t> id_to_index;
         for(auto i = 0; i < ni.nodes.size(); i++) id_to_index[ni.nodes[i].id] = i;
-
-        config.connection_rule.resize(ni.conns.size());
-        std::transform(ni.conns.begin(), ni.conns.end(), config.connection_rule.begin(),
-                       [&id_to_index](const auto& c) {
-                           return c.enable ? std::make_pair(id_to_index[c.in], id_to_index[c.out]) : std::make_pair(0u, 0u);
-                       });
-        auto iter = std::remove_if(config.connection_rule.begin(), config.connection_rule.end(),
-                                   [](auto&& p) { return p.first == 0 && p.second == 0; });
-        config.connection_rule.erase(iter, config.connection_rule.end());
-        return network(config);
+        std::transform(ni.conns.begin(), ni.conns.end(), config.conn.begin(),
+                [&id_to_index](const auto& c) {
+            return c.enable ?
+                std::make_tuple(id_to_index[c.in], id_to_index[c.out], c.weight) :
+                std::make_tuple(0u, 0u, c.weight); });
+        auto iter = std::remove_if(config.conn.begin(), config.conn.end(),
+                [](auto&& c) { return std::get<0>(c) == 0 && std::get<1>(c) == 0; });
+        config.conn.erase(iter, config.conn.end());
+        std::transform(ni.nodes.begin(), ni.nodes.end(), config.node.begin(),
+                [](auto&& n) { return std::make_tuple(n.activation_function, n.bias); });
+        config.f = ni.activations;
+        if(is_feedforward) {
+            return std::make_shared<feedforward>(config);
+        } else {
+            return std::make_shared<recurrent>(config);
+        }
     };
     gconfig.initializer = [&pool = config.pool, &config]() -> individual_t {
         std::tuple<TArgs...> d;
