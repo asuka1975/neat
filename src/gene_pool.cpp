@@ -4,6 +4,9 @@
 #include "gene_pool.h"
 
 #include <algorithm>
+#include <utility>
+#include <set>
+#include "graph_algorithm.h"
 
 #include "random_generator.h"
 
@@ -18,13 +21,14 @@ void gene_pool::init_gene(network_information &gene, std::uint32_t node_num, std
     gene.input_num = input_num;
     gene.output_num = output_num;
     node_count = node_num > node_count ? node_num : node_count;
+    gene.activations = activation_functions;
 
     gene.nodes.resize(node_num);
     for(auto i = 0; i < node_num; i++) {
         gene.nodes[i].id = i + 1;
         gene.nodes[i].bias = random_generator::random_normal<float>(bias_init_mean, bias_init_stdev);
         auto j = random_generator::random<std::size_t>() % activation_functions.size();
-        gene.nodes[i].activation_function = activation_functions[j];
+        gene.nodes[i].activation_function = j;
     }
 }
 
@@ -34,7 +38,7 @@ void gene_pool::add_node(network_information &gene) {
 
     auto idx = random_generator::random<std::size_t>() % activation_functions.size();
     auto bias = random_generator::random_normal(bias_init_mean, bias_init_stdev);
-    gene.nodes.push_back( node { node_count, bias, activation_functions[idx]});
+    gene.nodes.push_back( node { node_count, bias, static_cast<uint32_t>(idx)});
 
     std::vector<std::size_t> indexes;
     for(auto i = 0; i < gene.conns.size(); i++) if(gene.conns[i].enable) indexes.push_back(i);
@@ -69,9 +73,9 @@ void gene_pool::add_connection(network_information &gene) {
         }
     }
 
-    auto iter = std::remove_if(conn_pair.begin(), conn_pair.end(), [&conns = gene.conns](auto&& p) {
-        return std::find_if(conns.begin(), conns.end(), [&p](auto&& c) -> bool {
-            return c.in == p.first && c.out == p.second;
+    auto iter = std::remove_if(conn_pair.begin(), conn_pair.end(), [&conns = gene.conns, &gene](auto&& p) {
+        return std::find_if(conns.begin(), conns.end(), [&p, &gene](auto&& c) -> bool {
+            return (c.in == p.first && c.out == p.second) || (gene.input_num <= c.in && c.in < gene.input_num + gene.output_num);
         }) != conns.end();
     });
 
@@ -85,7 +89,6 @@ void gene_pool::add_connection(network_information &gene) {
         if(c.id > id) break;
         j++;
     }
-    auto p = conn_pair[idx];
     auto weight = random_generator::random_uniform<float>(-1.0, 1.0);
     gene.conns.insert(gene.conns.begin() + j,
             connection { id, conn_pair[idx].first, conn_pair[idx].second, weight, true });
@@ -100,7 +103,7 @@ void gene_pool::mutate_activation(float r, network_information &gene) {
     for(auto& c : gene.nodes) {
         if(random_generator::random<float>() < r) {
             auto i = random_generator::random<std::size_t>() % activation_functions.size();
-            c.activation_function = activation_functions[i];
+            c.activation_function = i;
         }
     }
 }
@@ -133,4 +136,87 @@ std::uint32_t gene_pool::push_gene(std::uint32_t in, std::uint32_t out) {
     else {
         return iter->id;
     }
+}
+
+gene_pool::~gene_pool() = default;
+
+feedforward_gene_pool::feedforward_gene_pool(float bias_init_mean, float bias_init_stdev,
+                                             std::vector<std::function<float(float)>> actionvation_functions)
+        : gene_pool(bias_init_mean, bias_init_stdev, std::move(actionvation_functions)) {
+
+}
+
+void feedforward_gene_pool::init_gene(network_information &gene, std::uint32_t node_num, std::uint32_t input_num,
+                                      std::uint32_t output_num) {
+    gene_pool::init_gene(gene, node_num, input_num, output_num);
+}
+
+void feedforward_gene_pool::add_node(network_information &gene) {
+    gene_pool::add_node(gene);
+}
+
+void feedforward_gene_pool::delete_node(network_information &gene) {
+    gene_pool::delete_node(gene);
+}
+
+void feedforward_gene_pool::add_connection(network_information &gene) {
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> conns(gene.conns.size());
+    std::transform(gene.conns.begin(), gene.conns.end(), conns.begin(), [](auto&& c) { return std::make_pair(c.in, c.out); });
+
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> conn_pair(gene.node_num * (gene.node_num - 1));
+    for(auto i = 0, k = 0; i < gene.node_num; i++) {
+        for(auto j = 0; j < gene.node_num; j++) {
+            if(i == j) continue;
+            conn_pair[k] = std::make_pair(gene.nodes[i].id, gene.nodes[j].id);
+            k++;
+        }
+    }
+
+    auto iter = std::remove_if(conn_pair.begin(), conn_pair.end(), [&conns = gene.conns](auto&& p) {
+        return std::find_if(conns.begin(), conns.end(), [&p](auto&& c) -> bool {
+            return c.in == p.first && c.out == p.second;
+        }) != conns.end();
+    });
+    auto size = iter - conn_pair.begin();
+    if(size == 0) return;
+    auto idx = size;
+    while(true) {
+        idx = random_generator::random<std::size_t>() % size;
+        conns.emplace_back(conn_pair[idx].first, conn_pair[idx].second);
+        if(is_acyclic(gene.node_num, conns)) break;
+        conns.pop_back();
+        conn_pair.erase(conn_pair.begin() + idx);
+        size--;
+        if(size == 0) return;
+    }
+    auto id = push_gene(conn_pair[idx].first, conn_pair[idx].second);
+
+    auto j = 0;
+    for(auto&& c : gene.conns) {
+        if(c.id > id) break;
+        j++;
+    }
+    auto weight = random_generator::random_uniform<float>(-1.0, 1.0);
+    gene.conns.insert(gene.conns.begin() + j,
+                      connection { id, conn_pair[idx].first, conn_pair[idx].second, weight, true });
+}
+
+void feedforward_gene_pool::delete_connection(network_information &gene) {
+    gene_pool::delete_connection(gene);
+}
+
+void feedforward_gene_pool::mutate_activation(float r, network_information &gene) {
+    gene_pool::mutate_activation(r, gene);
+}
+
+void feedforward_gene_pool::mutate_enable(float r, network_information &gene) {
+    gene_pool::mutate_enable(r, gene);
+}
+
+void feedforward_gene_pool::mutate_bias(float r, network_information &gene) {
+    gene_pool::mutate_bias(r, gene);
+}
+
+void feedforward_gene_pool::mutate_weight(float r, network_information &gene) {
+    gene_pool::mutate_weight(r, gene);
 }

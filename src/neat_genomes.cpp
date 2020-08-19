@@ -8,6 +8,7 @@ network_information network_information::crossover(const network_information &d1
     d.output_num = d1.output_num;
     d.input_num = d1.input_num;
     d.node_num = 0;
+    d.activations = d1.activations;
     auto input_output = d.input_num + d.output_num;
     d.nodes.reserve(d1.node_num + d2.node_num - input_output);
     for(auto i = 0u, j = 0u; i < d1.nodes.size() || j < d2.nodes.size(); ) {
@@ -35,10 +36,10 @@ network_information network_information::crossover(const network_information &d1
     d.conns.reserve(d1.conns.size() + d2.conns.size());
     for (auto i = 0u, j = 0u; i < d1.conns.size() || j < d2.conns.size(); ) {
         if(i < d1.conns.size() && j < d2.conns.size()) {
-            if(i < d1.conns.size()) {
+            if(d1.conns[i].id < d2.conns[j].id) {
                 d.conns.push_back(d1.conns[i]);
                 i++;
-            } else if(j < d2.conns.size()) {
+            } else if(d1.conns[i].id > d2.conns[j].id) {
                 d.conns.push_back(d2.conns[j]);
                 j++;
             } else {

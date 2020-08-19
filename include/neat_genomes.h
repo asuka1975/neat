@@ -11,7 +11,7 @@
 struct node {
     std::uint32_t id;
     float bias;
-    std::function<float(float)> activation_function;
+    std::uint32_t activation_function;
 };
 
 struct connection {
@@ -23,12 +23,13 @@ struct connection {
 };
 
 struct network_information {
-    using expression_t = network;
+    using expression_t = std::shared_ptr<network>;
     std::uint32_t node_num;
     std::uint32_t input_num;
     std::uint32_t output_num;
     std::vector<node> nodes;
     std::vector<connection> conns;
+    std::vector<std::function<float(float)>> activations;
     static network_information crossover(const network_information& d1, const network_information& d2);
 };
 
