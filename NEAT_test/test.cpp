@@ -20,11 +20,11 @@ namespace {
         config.fitness_max = 4.0f;
 
         config.weight_mutate_rate = 0.1;
-        config.bias_mutate_rate = 0.05;
-        config.enable_mutate_rate = 0.02;
+        config.bias_mutate_rate = 0.075;
+        config.enable_mutate_rate = 0.01;
         config.activation_mutate_rate = 0;
-        config.node_add_prob = 0.01f;
-        config.node_delete_prob = 0.01f;
+        config.node_add_prob = 0.00f;
+        config.node_delete_prob = 0.00f;
         config.conn_add_prob = 0.01;
         config.conn_delete_prob = 0.01;
 
