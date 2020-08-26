@@ -102,28 +102,28 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
         return d;
     };
     gconfig.mutates.emplace_back(config.node_add_prob, [&pool = config.pool](individual_t& d) -> void {
-        pool->add_node(std::get<0>(d));
+        pool->add_node(std::get<I>(d));
     });
     gconfig.mutates.emplace_back(config.node_delete_prob, [&pool = config.pool](individual_t& d) -> void {
-        pool->delete_node(std::get<0>(d));
+        pool->delete_node(std::get<I>(d));
     });
     gconfig.mutates.emplace_back(config.conn_add_prob, [&pool = config.pool](individual_t& d) -> void {
-        pool->add_connection(std::get<0>(d));
+        pool->add_connection(std::get<I>(d));
     });
     gconfig.mutates.emplace_back(config.conn_delete_prob, [&pool = config.pool](individual_t& d) -> void {
-        pool->delete_connection(std::get<0>(d));
+        pool->delete_connection(std::get<I>(d));
     });
     gconfig.node_mutates.emplace_back(config.enable_mutate_rate, [&pool = config.pool](float r, individual_t& d) -> void {
-        pool->mutate_enable(r, std::get<0>(d));
+        pool->mutate_enable(r, std::get<I>(d));
     });
     gconfig.node_mutates.emplace_back(config.activation_mutate_rate, [&pool = config.pool](float r, individual_t& d) -> void {
-        pool->mutate_activation(r, std::get<0>(d));
+        pool->mutate_activation(r, std::get<I>(d));
     });
     gconfig.node_mutates.emplace_back(config.bias_mutate_rate, [&pool = config.pool](float r, individual_t& d) -> void {
-        pool->mutate_bias(r, std::get<0>(d));
+        pool->mutate_bias(r, std::get<I>(d));
     });
     gconfig.node_mutates.emplace_back(config.weight_mutate_rate, [&pool = config.pool](float  r, individual_t& d) -> void {
-        pool->mutate_weight(r, std::get<0>(d));
+        pool->mutate_weight(r, std::get<I>(d));
     });
 }
 
