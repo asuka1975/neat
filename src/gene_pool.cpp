@@ -10,12 +10,12 @@
 
 #include "random_generator.h"
 
-gene_pool::gene_pool(float bias_init_mean, float bias_init_stdev, std::vector<std::function<float(float)>> activation_functions) :
+gene_pool_base::gene_pool_base(float bias_init_mean, float bias_init_stdev, std::vector<std::function<float(float)>> activation_functions) :
     bias_init_mean(bias_init_mean), bias_init_stdev(bias_init_stdev), activation_functions(std::move(activation_functions)) {
     node_count = 0;
 }
 
-void gene_pool::init_gene(network_information &gene, std::uint32_t node_num, std::uint32_t input_num,
+void gene_pool_base::init_gene(network_information_base &gene, std::uint32_t node_num, std::uint32_t input_num,
                           std::uint32_t output_num) {
     gene.node_num = node_num;
     gene.input_num = input_num;
@@ -32,7 +32,7 @@ void gene_pool::init_gene(network_information &gene, std::uint32_t node_num, std
     }
 }
 
-void gene_pool::add_node(network_information &gene) {
+void gene_pool_base::add_node(network_information_base &gene) {
     gene.node_num++;
     node_count++;
 
@@ -51,7 +51,7 @@ void gene_pool::add_node(network_information &gene) {
                                       random_generator::random_uniform<float>(-1.0, 1.0), true});
 }
 
-void gene_pool::delete_node(network_information &gene) {
+void gene_pool_base::delete_node(network_information_base &gene) {
     auto hidden_num = gene.node_num - gene.input_num - gene.output_num;
     gene.node_num--;
 
@@ -63,7 +63,7 @@ void gene_pool::delete_node(network_information &gene) {
     gene.conns.erase(iter, gene.conns.end());
 }
 
-void gene_pool::add_connection(network_information &gene) {
+void gene_pool_base::add_connection(network_information_base &gene) {
     std::vector<std::pair<std::uint32_t, std::uint32_t>> conn_pair(gene.node_num * (gene.node_num - 1));
     for(auto i = 0, k = 0; i < gene.node_num; i++) {
         for(auto j = 0; j < gene.node_num; j++) {
@@ -94,12 +94,12 @@ void gene_pool::add_connection(network_information &gene) {
             connection { id, conn_pair[idx].first, conn_pair[idx].second, weight, true });
 }
 
-void gene_pool::delete_connection(network_information &gene) {
+void gene_pool_base::delete_connection(network_information_base &gene) {
     auto idx = random_generator::random<std::size_t>() % gene.conns.size();
     gene.conns.erase(gene.conns.begin() + idx);
 }
 
-void gene_pool::mutate_activation(float r, network_information &gene) {
+void gene_pool_base::mutate_activation(float r, network_information_base &gene) {
     for(auto& c : gene.nodes) {
         if(random_generator::random<float>() < r) {
             auto i = random_generator::random<std::size_t>() % activation_functions.size();
@@ -108,24 +108,24 @@ void gene_pool::mutate_activation(float r, network_information &gene) {
     }
 }
 
-void gene_pool::mutate_enable(float r, network_information &gene) {
+void gene_pool_base::mutate_enable(float r, network_information_base &gene) {
     for(auto& c : gene.conns)
         if(random_generator::random<float>() < r) c.enable = !c.enable;
 }
 
-void gene_pool::mutate_bias(float r, network_information &gene) {
+void gene_pool_base::mutate_bias(float r, network_information_base &gene) {
     for(auto& n : gene.nodes)
         if(random_generator::random<float>() < r)
             n.bias = random_generator::random_uniform<float>(-1.0f, 1.0f);
 }
 
-void gene_pool::mutate_weight(float r, network_information &gene) {
+void gene_pool_base::mutate_weight(float r, network_information_base &gene) {
     for(auto& c : gene.conns)
         if(random_generator::random<float>() < r)
             c.weight = random_generator::random_uniform<float>(-1.0f, 1.0f);
 }
 
-std::uint32_t gene_pool::push_gene(std::uint32_t in, std::uint32_t out) {
+std::uint32_t gene_pool_base::push_gene(std::uint32_t in, std::uint32_t out) {
     auto iter = std::find_if(genes.begin(), genes.end(), [in, out](const connection_gene& gene) -> bool {
         return gene.in == in && gene.out == out;
     });
@@ -138,85 +138,4 @@ std::uint32_t gene_pool::push_gene(std::uint32_t in, std::uint32_t out) {
     }
 }
 
-gene_pool::~gene_pool() = default;
-
-feedforward_gene_pool::feedforward_gene_pool(float bias_init_mean, float bias_init_stdev,
-                                             std::vector<std::function<float(float)>> actionvation_functions)
-        : gene_pool(bias_init_mean, bias_init_stdev, std::move(actionvation_functions)) {
-
-}
-
-void feedforward_gene_pool::init_gene(network_information &gene, std::uint32_t node_num, std::uint32_t input_num,
-                                      std::uint32_t output_num) {
-    gene_pool::init_gene(gene, node_num, input_num, output_num);
-}
-
-void feedforward_gene_pool::add_node(network_information &gene) {
-    gene_pool::add_node(gene);
-}
-
-void feedforward_gene_pool::delete_node(network_information &gene) {
-    gene_pool::delete_node(gene);
-}
-
-void feedforward_gene_pool::add_connection(network_information &gene) {
-    std::vector<std::pair<std::uint32_t, std::uint32_t>> conns(gene.conns.size());
-    std::transform(gene.conns.begin(), gene.conns.end(), conns.begin(), [](auto&& c) { return std::make_pair(c.in, c.out); });
-
-    std::vector<std::pair<std::uint32_t, std::uint32_t>> conn_pair(gene.node_num * (gene.node_num - 1));
-    for(auto i = 0, k = 0; i < gene.node_num; i++) {
-        for(auto j = 0; j < gene.node_num; j++) {
-            if(i == j) continue;
-            conn_pair[k] = std::make_pair(gene.nodes[i].id, gene.nodes[j].id);
-            k++;
-        }
-    }
-
-    auto iter = std::remove_if(conn_pair.begin(), conn_pair.end(), [&conns = gene.conns](auto&& p) {
-        return std::find_if(conns.begin(), conns.end(), [&p](auto&& c) -> bool {
-            return c.in == p.first && c.out == p.second;
-        }) != conns.end();
-    });
-    auto size = iter - conn_pair.begin();
-    if(size == 0) return;
-    auto idx = size;
-    while(true) {
-        idx = random_generator::random<std::size_t>() % size;
-        conns.emplace_back(conn_pair[idx].first, conn_pair[idx].second);
-        if(is_acyclic(gene.node_num, conns)) break;
-        conns.pop_back();
-        conn_pair.erase(conn_pair.begin() + idx);
-        size--;
-        if(size == 0) return;
-    }
-    auto id = push_gene(conn_pair[idx].first, conn_pair[idx].second);
-
-    auto j = 0;
-    for(auto&& c : gene.conns) {
-        if(c.id > id) break;
-        j++;
-    }
-    auto weight = random_generator::random_uniform<float>(-1.0, 1.0);
-    gene.conns.insert(gene.conns.begin() + j,
-                      connection { id, conn_pair[idx].first, conn_pair[idx].second, weight, true });
-}
-
-void feedforward_gene_pool::delete_connection(network_information &gene) {
-    gene_pool::delete_connection(gene);
-}
-
-void feedforward_gene_pool::mutate_activation(float r, network_information &gene) {
-    gene_pool::mutate_activation(r, gene);
-}
-
-void feedforward_gene_pool::mutate_enable(float r, network_information &gene) {
-    gene_pool::mutate_enable(r, gene);
-}
-
-void feedforward_gene_pool::mutate_bias(float r, network_information &gene) {
-    gene_pool::mutate_bias(r, gene);
-}
-
-void feedforward_gene_pool::mutate_weight(float r, network_information &gene) {
-    gene_pool::mutate_weight(r, gene);
-}
+gene_pool_base::~gene_pool_base() = default;
