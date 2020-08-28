@@ -41,22 +41,21 @@ struct neat_config {
     std::uint32_t population;
     std::uint32_t epoch;
 
-    bool is_feedforward = true;
-
-    std::unique_ptr<gene_pool> pool;
+    std::unique_ptr<gene_pool_base> pool;
 };
 
-template <std::size_t I, class... TArgs>
+template <class TNet, std::size_t I, class... TArgs>
 void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) {
     static_assert(I < std::tuple_size_v<std::tuple<TArgs...>>, "index out of range of parameter pack `TArgs...`");
-    static_assert(std::is_same_v<std::tuple_element_t<I, std::tuple<TArgs...>>, network_information>,
+    static_assert(std::is_same_v<std::tuple_element_t<I, std::tuple<TArgs...>>, network_information<TNet>>,
             "selected type must be network_information");
+    static_assert(std::is_constructible_v<TNet, network_config> &&
+            std::is_invocable_v<decltype(&TNet::input), TNet, std::vector<float>> &&
+            std::is_invocable_r_v<std::vector<float>, decltype(&TNet::get_outputs), TNet> &&
+            std::is_invocable_r_v<std::size_t, decltype(&TNet::size), TNet>,
+                    "TNet is not network. TNet must have input(std::vector<float>), get_outputs() and size().");
     using individual_t = typename genetic::ga<TArgs...>::individual_t;
-    if(config.is_feedforward) {
-        config.pool = std::make_unique<feedforward_gene_pool>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
-    } else {
-        config.pool = std::make_unique<gene_pool>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
-    }
+    config.pool = std::make_unique<gene_pool<TNet>>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
 
     gconfig.population = config.population;
     gconfig.epoch = config.epoch;
@@ -64,9 +63,9 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
     gconfig.fitness_min = config.fitness_min;
     gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
-    gconfig.select = genetic::elite<network_information>{ config.elitism };
-    std::get<I>(gconfig.express) = [is_feedforward=config.is_feedforward](const network_information& ni)
-            -> std::shared_ptr<network> {
+    gconfig.select = genetic::elite<network_information<TNet>>{ config.elitism };
+    std::get<I>(gconfig.express) = [](const network_information<TNet>& ni)
+            -> TNet {
         network_config config;
         config.input_num = ni.input_num;
         config.output_num = ni.output_num;
@@ -85,11 +84,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
         std::transform(ni.nodes.begin(), ni.nodes.end(), config.node.begin(),
                 [](auto&& n) { return std::make_tuple(n.activation_function, n.bias); });
         config.f = ni.activations;
-        if(is_feedforward) {
-            return std::make_shared<feedforward>(config);
-        } else {
-            return std::make_shared<recurrent>(config);
-        }
+        return TNet(config);
     };
     gconfig.initializer = [&pool = config.pool, &config]() -> individual_t {
         std::tuple<TArgs...> d;
