@@ -63,7 +63,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
     gconfig.fitness_min = config.fitness_min;
     gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
-    gconfig.select = genetic::elite<network_information<TNet>>{ config.elitism };
+    gconfig.select = genetic::elite<TArgs...>{ config.elitism };
     std::get<I>(gconfig.express) = [](const network_information<TNet>& ni)
             -> TNet {
         network_config config;
