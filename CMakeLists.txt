@@ -14,12 +14,12 @@ add_library(neat include/neat.h include/neat_genomes.h include/gene_pool.h
 
 target_include_directories(neat PUBLIC include ${GA_INCLUDE_DIR} ${NETWORK_INCLUDE_DIR})
 
-if(NOT TARGET NEAT_test)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(NEAT_test)
 endif()
-if(NOT TARGET genetic-algorithm)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(genetic-algorithm)
 endif()
-if(NOT TARGET network)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(network)
 endif()
