@@ -9,15 +9,10 @@
 namespace {
     TEST(NEAT_BEHAVIOR_TEST, TEST1) {
         neat_config config;
-        config.population = 20;
-        config.epoch = 1000;
         config.num_inputs = 2;
         config.num_outputs = 1;
         config.num_hidden = 3;
         config.num_init_conns = 5;
-
-        config.fitness_min = 0.0f;
-        config.fitness_max = 4.0f;
 
         config.weight_mutate_rate = 0.1;
         config.bias_mutate_rate = 0.075;
@@ -63,6 +58,11 @@ namespace {
             std::cout << average << " " << max << " " << min << std::endl;
             std::cout << size << std::endl;
         };
+        gconfig.population = 20;
+        gconfig.epoch = 1000;
+
+        gconfig.fitness_min = 0.0f;
+        gconfig.fitness_max = 4.0f;
         genetic::ga<network_information> ga(gconfig);
         ga.run();
     }

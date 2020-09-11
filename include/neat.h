@@ -35,12 +35,6 @@ struct neat_config {
     float bias_mutate_rate;
     float weight_mutate_rate;
 
-    float fitness_max;
-    float fitness_min;
-
-    std::uint32_t population;
-    std::uint32_t epoch;
-
     std::unique_ptr<gene_pool_base> pool;
 };
 
@@ -57,10 +51,6 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
     using individual_t = typename genetic::ga<TArgs...>::individual_t;
     config.pool = std::make_unique<gene_pool<TNet>>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
 
-    gconfig.population = config.population;
-    gconfig.epoch = config.epoch;
-    gconfig.fitness_max = config.fitness_max;
-    gconfig.fitness_min = config.fitness_min;
     gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
     gconfig.select = genetic::elite<TArgs...>{ config.elitism };
