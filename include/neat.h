@@ -86,15 +86,14 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
         config.f = ni.activations;
         return TNet(config);
     };
-    gconfig.initializer = [&pool = config.pool, &config]() -> individual_t {
-        std::tuple<TArgs...> d;
-        auto& n = std::get<I>(d);
+    std::get<I>(gconfig.initializer) = [&pool = config.pool, &config]() {
+        network_information<TNet> n;
         pool->init_gene(n, config.num_inputs + config.num_outputs + config.num_hidden,
                         config.num_inputs, config.num_outputs);
         for(auto i = 0; i < config.num_init_conns; i++) {
             pool->add_connection(n);
         }
-        return d;
+        return n;
     };
     gconfig.mutates.emplace_back(config.node_add_prob, [&pool = config.pool](individual_t& d) -> void {
         pool->add_node(std::get<I>(d));
