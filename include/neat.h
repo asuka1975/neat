@@ -38,10 +38,10 @@ struct neat_config {
     std::unique_ptr<gene_pool_base> pool;
 };
 
-template <class TNet, std::size_t I, class... TArgs>
+template <class TNet, class TRealCrossover, std::size_t I, class... TArgs>
 void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) {
     static_assert(I < std::tuple_size_v<std::tuple<TArgs...>>, "index out of range of parameter pack `TArgs...`");
-    static_assert(std::is_same_v<std::tuple_element_t<I, std::tuple<TArgs...>>, network_information<TNet>>,
+    static_assert(std::is_same_v<std::tuple_element_t<I, std::tuple<TArgs...>>, network_information<TNet, TRealCrossover>>,
             "selected type must be network_information");
     static_assert(std::is_constructible_v<TNet, network_config> &&
             std::is_invocable_v<decltype(&TNet::input), TNet, std::vector<float>> &&
@@ -54,7 +54,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
     gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
     gconfig.select = genetic::elite<TArgs...>{ config.elitism };
-    std::get<I>(gconfig.express) = [](const network_information<TNet>& ni)
+    std::get<I>(gconfig.express) = [](const network_information<TNet, TRealCrossover>& ni)
             -> TNet {
         network_config config;
         config.input_num = ni.input_num;
@@ -77,7 +77,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
         return TNet(config);
     };
     std::get<I>(gconfig.initializer) = [&pool = config.pool, &config]() {
-        network_information<TNet> n;
+        network_information<TNet, TRealCrossover> n;
         pool->init_gene(n, config.num_inputs + config.num_outputs + config.num_hidden,
                         config.num_inputs, config.num_outputs);
         for(auto i = 0; i < config.num_init_conns; i++) {

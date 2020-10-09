@@ -29,9 +29,9 @@ namespace {
                 [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
         };
 
-        using network_information = network_information<recurrent>;
+        using network_information = network_information<recurrent, blx_alpha<0, 5>>;
         genetic::ga_config<network_information> gconfig;
-        configure_neat<recurrent, 0>(config, gconfig);
+        configure_neat<recurrent, blx_alpha<0, 5>, 0>(config, gconfig);
         gconfig.step = [](const std::vector<genetic::ga_config<network_information>::expression_t>& p) {
             std::vector<float> f;
             for(auto e : p) {
@@ -65,6 +65,13 @@ namespace {
         gconfig.fitness_max = 4.0f;
         genetic::ga<network_information> ga(gconfig);
         ga.run();
+    }
+
+    TEST(ALGORITHM_TEST, FLOAT) {
+        EXPECT_FLOAT_EQ((blx_alpha<2, 24>::alpha()), 2.24f);
+        EXPECT_FLOAT_EQ((blx_alpha<0, 24>::alpha()), 0.24f);
+        EXPECT_FLOAT_EQ((blx_alpha<0, 324>::alpha()), 0.324f);
+        EXPECT_FLOAT_EQ((blx_alpha<20, 324>::alpha()), 20.324f);
     }
 }
 
