@@ -7,6 +7,7 @@
 
 #include <functional>
 #include "network.h"
+#include "random_generator.h"
 
 struct node {
     std::uint32_t id;
@@ -31,11 +32,28 @@ struct network_information_base {
     std::vector<std::function<float(float)>> activations;
 };
 
-template <class TNet>
+template <int Dig, int Dec> // alpha = 2.24 -> blx_alpha<2, 24>
+struct blx_alpha {
+    static float crossover(float x, float y) {
+        constexpr float a = alpha();
+        float min = std::min(x, y);
+        float max = std::max(x, y);
+        float d = max - min;
+        min -= d * a; max += d * a;
+        return random_generator::random_uniform<float>(min, max);
+    }
+    static constexpr float alpha() {
+        int i = 1;
+        for(; Dec / i; i *= 10) ;
+        return Dig + static_cast<float>(Dec) / i;
+    }
+};
+
+template <class TNet, class TRealCrossover>
 struct network_information : network_information_base {
     using expression_t = TNet;
-    static network_information<TNet> crossover(const network_information<TNet>& d1, const network_information<TNet>& d2) {
-        network_information<TNet> d;
+    static network_information<TNet, TRealCrossover> crossover(const network_information<TNet, TRealCrossover>& d1, const network_information<TNet, TRealCrossover>& d2) {
+        network_information<TNet, TRealCrossover> d;
         d.output_num = d1.output_num;
         d.input_num = d1.input_num;
         d.node_num = 0;
@@ -51,7 +69,9 @@ struct network_information : network_information_base {
                     d.nodes.push_back(d2.nodes[j]);
                     j++;
                 } else {
-                    d.nodes.push_back(d1.nodes[i]);
+                    node n = d1.nodes[i];
+                    n.bias = TRealCrossover::crossover(d1.nodes[i].bias, d2.nodes[i].bias);
+                    d.nodes.push_back(n);
                     i++, j++;
                 }
             } else if(i < d1.nodes.size()) {
@@ -74,7 +94,9 @@ struct network_information : network_information_base {
                     d.conns.push_back(d2.conns[j]);
                     j++;
                 } else {
-                    d.conns.push_back(d1.conns[i]);
+                    connection c = d1.conns[i];
+                    c.weight = TRealCrossover::crossover(d1.conns[i].weight, d2.conns[i].weight);
+                    d.conns.push_back(c);
                     i++, j++;
                 }
             } else if(i < d1.conns.size()) {
