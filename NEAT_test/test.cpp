@@ -60,7 +60,7 @@ namespace {
             std::cout << size << std::endl;
         };
         gconfig.population = 20;
-        gconfig.epoch = 20000;
+        gconfig.epoch = 10000;
 
         gconfig.fitness_min = 0.0f;
         gconfig.fitness_max = 4.0f;

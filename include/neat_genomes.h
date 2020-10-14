@@ -142,8 +142,8 @@ struct network_information : network_information_base {
                     d++;
                     j++;
                 } else {
-                    i++, j++, count++;
                     w += std::abs(d1.conns[i].weight - d2.conns[j].weight);
+                    i++, j++, count++;
                 }
             } else if(i < d1.conns.size()) {
                 e++;
