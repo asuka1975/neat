@@ -170,13 +170,21 @@ private:
     float dt;
     std::uint32_t elitism;
     template <class T> class mapply_impl;
+    template <class T, class = void> struct has_distance : std::false_type {};
+    template <class T> struct has_distance<T, std::void_t<decltype(T::distance)>> : std::true_type {};
+    template <class T, class = void> struct distance_wrapper {
+        static float distance(const T&, const T&) { return 0; }
+    };
+    template <class T> struct distance_wrapper<T, std::enable_if_t<has_distance<T>::value>> {
+        static float distance(const T& d1, const T& d2) { return T::distance(d1, d2); }
+    };
     template <size_t... I>
     struct mapply_impl<std::index_sequence<I...>> {
         static float mapply(const typename genetic::ga<TArgs...>::individual_t& d1, const typename genetic::ga<TArgs...>::individual_t& d2) {
             static auto distance = [](std::initializer_list<float> args) -> float {
                 return std::sqrt(std::accumulate(args.begin(), args.end(), 0, [](float a, float b) { return a + b * b; }));
             };
-            return distance({std::tuple_element<I, std::tuple<TArgs...>>::type::distance(std::get<I>(d1), std::get<I>(d2))...});
+            return distance({distance_wrapper<typename std::tuple_element<I, std::tuple<TArgs...>>::type>::distance(std::get<I>(d1), std::get<I>(d2))...});
         }
     };
 };
