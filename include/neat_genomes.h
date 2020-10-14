@@ -8,9 +8,9 @@
 #include <functional>
 #include <list>
 #include "network.h"
+#include "random_generator.h"
 #include "ga.h"
 #include "selector.h"
-#include "random_generator.h"
 
 struct node {
     std::uint32_t id;
@@ -52,11 +52,25 @@ struct blx_alpha {
     }
 };
 
-template <class TNet, class TRealCrossover>
+template <int Dig, int Dec>
+struct literal_float_t {
+    static constexpr float value() {
+        int i = 1;
+        for(; Dec / i; i *= 10) ;
+        return Dig + static_cast<float>(Dec) / i;
+    }
+};
+
+template <class TNet, class TRealCrossover, class C1=literal_float_t<0,0>, class C2=literal_float_t<0,0>, class C3=literal_float_t<0,0>, class N=literal_float_t<1,0>>
 struct network_information : network_information_base {
     using expression_t = TNet;
-    static network_information<TNet, TRealCrossover> crossover(const network_information<TNet, TRealCrossover>& d1, const network_information<TNet, TRealCrossover>& d2) {
-        network_information<TNet, TRealCrossover> d;
+    using real_crossover_t = TRealCrossover;
+    using c1_t = C1;
+    using c2_t = C2;
+    using c3_t = C3;
+    using n_t = N;
+    static network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t> crossover(const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d1, const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d2) {
+        network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t> d;
         d.output_num = d1.output_num;
         d.input_num = d1.input_num;
         d.node_num = 0;
@@ -72,9 +86,9 @@ struct network_information : network_information_base {
                     d.nodes.push_back(d2.nodes[j]);
                     j++;
                 } else {
-                    node n = d1.nodes[i];
-                    n.bias = TRealCrossover::crossover(d1.nodes[i].bias, d2.nodes[i].bias);
-                    d.nodes.push_back(n);
+                    node n_ = d1.nodes[i];
+                    n_.bias = TRealCrossover::crossover(d1.nodes[i].bias, d2.nodes[i].bias);
+                    d.nodes.push_back(n_);
                     i++, j++;
                 }
             } else if(i < d1.nodes.size()) {
@@ -112,31 +126,63 @@ struct network_information : network_information_base {
         }
         return d;
     }
+    static float distance(const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d1, const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d2) {
+        constexpr float c1 = c1_t::value();
+        constexpr float c2 = c2_t::value();
+        constexpr float c3 = c3_t::value();
+        constexpr float n = n_t::value();
+        std::size_t d = 0, e = 0, count = 0;
+        float w = 0;
+        for(std::size_t i = 0, j = 0; ; ) {
+            if(i < d1.conns.size() && j < d2.conns.size()) {
+                if(d1.conns[i].id < d2.conns[j].id) {
+                    d++;
+                    i++;
+                } else if(d1.conns[i].id > d2.conns[j].id) {
+                    d++;
+                    j++;
+                } else {
+                    i++, j++, count++;
+                    w += std::abs(d1.conns[i].weight - d2.conns[j].weight);
+                }
+            } else if(i < d1.conns.size()) {
+                e++;
+                i++;
+            } else if(j < d2.conns.size()) {
+                e++;
+                j++;
+            } else {
+                break;
+            }
+        }
+        return c1 * d / n + c2 * e / n + c3 * w;
+    }
 };
 
 //selection operator (niching)
 template <class... TArgs>
 class species {
 public:
-    explicit species(float dt);
+    explicit species(float dt, std::uint32_t elitism = 0);
     std::vector<typename genetic::ga<TArgs...>::individual_t>
     operator()(const std::vector<typename genetic::ga<TArgs...>::individual_t>& pop, const std::vector<float>& fitness);
 private:
     float dt;
+    std::uint32_t elitism;
     template <class T> class mapply_impl;
     template <size_t... I>
-    class mapply_impl<std::index_sequence<I...>> {
+    struct mapply_impl<std::index_sequence<I...>> {
         static float mapply(const typename genetic::ga<TArgs...>::individual_t& d1, const typename genetic::ga<TArgs...>::individual_t& d2) {
             static auto distance = [](std::initializer_list<float> args) -> float {
                 return std::sqrt(std::accumulate(args.begin(), args.end(), 0, [](float a, float b) { return a + b * b; }));
             };
-            return distance(typename std::tuple_element<I, std::tuple<TArgs...>>::type::distance(std::get<I>(d1), std::get<I>(d2))...);
+            return distance({std::tuple_element<I, std::tuple<TArgs...>>::type::distance(std::get<I>(d1), std::get<I>(d2))...});
         }
     };
 };
 
 template <class... TArgs>
-inline species<TArgs...>::species(float dt) : dt(dt) {}
+inline species<TArgs...>::species(float dt, std::uint32_t elitism) : dt(dt), elitism(elitism) {}
 
 template <class... TArgs>
 inline std::vector<typename genetic::ga<TArgs...>::individual_t>
@@ -148,16 +194,16 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
     for(auto i = 0; i < pop.size(); i++) {
         float f = 0.0f;
         for(auto j = 0; j < pop.size(); j++) {
-            if(typename mapply_impl<std::index_sequence_for<TArgs...>>::mapply(pop[i], pop[j]) <= dt) {
+            if(mapply_impl<std::index_sequence_for<TArgs...>>::mapply(pop[i], pop[j]) <= dt) {
                 f += 1.0f;
                 specie[i].push_back(j);
             }
         }
         fitness_updated[i] = fitness[i] / f;
     }
-    std::vector<index_t> idx(pop.size()); std::iota(idx.begin(), idx.end());
+    std::vector<index_t> idx(pop.size()); std::iota(idx.begin(), idx.end(), 0);
     std::sort(idx.begin(), idx.end(), [&fitness_updated](auto i, auto j) {
-        return fitness_updated[i] < fitness_updated[j];
+        return fitness_updated[i] > fitness_updated[j];
     });
     std::for_each(fitness_updated.begin(), fitness_updated.end(), [m=*std::min_element(fitness_updated.begin(), fitness_updated.end())](auto& x) {
         x -= m;
@@ -173,6 +219,10 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
     }
 
     for(auto i = 0; i < pop.size(); i++) {
+        if(i < elitism) {
+            p[i] = pop[idx[i]];
+            continue;
+        }
         auto r = random_generator::random<float>();
         float range = 0;
         index_t j;
