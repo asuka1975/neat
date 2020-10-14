@@ -155,6 +155,7 @@ struct network_information : network_information_base {
                 break;
             }
         }
+        if(count != 0) w /= count;
         return c1 * d / n + c2 * e / n + c3 * w;
     }
 };
