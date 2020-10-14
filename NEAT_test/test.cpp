@@ -28,10 +28,11 @@ namespace {
         config.activation_functions = std::vector<std::function<float(float)>>{
                 [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
         };
+        config.dt = 0.5f;
 
-        using network_information = network_information<recurrent, blx_alpha<0, 5>>;
+        using network_information = network_information<recurrent, blx_alpha<0, 5>, literal_float_t<0,5>, literal_float_t<0,5>, literal_float_t<0,5>>;
         genetic::ga_config<network_information> gconfig;
-        configure_neat<recurrent, blx_alpha<0, 5>, 0>(config, gconfig);
+        configure_neat<recurrent, 0>(config, gconfig);
         gconfig.step = [](const std::vector<genetic::ga_config<network_information>::expression_t>& p) {
             std::vector<float> f;
             for(auto e : p) {
@@ -59,7 +60,7 @@ namespace {
             std::cout << size << std::endl;
         };
         gconfig.population = 20;
-        gconfig.epoch = 1000;
+        gconfig.epoch = 500;
 
         gconfig.fitness_min = 0.0f;
         gconfig.fitness_max = 4.0f;
