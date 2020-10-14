@@ -42,6 +42,7 @@ void gene_pool_base::add_node(network_information_base &gene) {
 
     std::vector<std::size_t> indexes;
     for(auto i = 0; i < gene.conns.size(); i++) if(gene.conns[i].enable) indexes.push_back(i);
+    if(indexes.empty()) return;
     auto j = indexes[random_generator::random<std::size_t>() % indexes.size()];
     gene.conns[j].enable = false;
 
