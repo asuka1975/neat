@@ -210,8 +210,8 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
         fitness_updated[i] = fitness[i] / f;
     }
     std::vector<index_t> idx(pop.size()); std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(), [&fitness_updated](auto i, auto j) {
-        return fitness_updated[i] > fitness_updated[j];
+    std::sort(idx.begin(), idx.end(), [&fitness](auto i, auto j) {
+        return fitness[i] > fitness[j];
     });
     std::for_each(fitness_updated.begin(), fitness_updated.end(), [m=*std::min_element(fitness_updated.begin(), fitness_updated.end())](auto& x) {
         x -= m;
@@ -243,11 +243,11 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
         if(specie[j].empty()) p[i] = pop[j];
         else {
             float range_ = 0;
-            index_t k;
+            index_t k = specie[j][0];
             r = random_generator::random_uniform<float>(0, std::accumulate(specie[j].begin(), specie[j].end(), 0.0f, [&fitness_updated](auto a, auto b) {
                 return a + fitness_updated[b];
             }));
-            for(index_t l = 0, k = specie[j][l]; l < specie[j].size(); k = specie[j][++l]) {
+            for(index_t l = 0; l < specie[j].size(); k = specie[j][++l]) {
                 if(range_ <= r && r < range_ + fitness_updated[k]) {
                     break;
                 }
