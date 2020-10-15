@@ -28,6 +28,7 @@ namespace {
         config.activation_functions = std::vector<std::function<float(float)>>{
                 [](float x) { return 1.0f / (1.0f + std::exp(-x)); }
         };
+        config.elitism = 1;
         config.dt = 1.0f;
 
         using network_information = network_information<recurrent, blx_alpha<0, 5>, literal_float_t<0,5>, literal_float_t<0,5>, literal_float_t<0,5>>;

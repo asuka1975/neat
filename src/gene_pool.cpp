@@ -24,7 +24,7 @@ void gene_pool_base::init_gene(network_information_base &gene, std::uint32_t nod
     gene.activations = activation_functions;
 
     gene.nodes.resize(node_num);
-    for(auto i = 0; i < node_num; i++) {
+    for(std::uint32_t i = 0; i < node_num; i++) {
         gene.nodes[i].id = i + 1;
         gene.nodes[i].bias = random_generator::random_normal<float>(bias_init_mean, bias_init_stdev);
         auto j = random_generator::random<std::size_t>() % activation_functions.size();
@@ -41,7 +41,7 @@ void gene_pool_base::add_node(network_information_base &gene) {
     gene.nodes.push_back( node { node_count, bias, static_cast<uint32_t>(idx)});
 
     std::vector<std::size_t> indexes;
-    for(auto i = 0; i < gene.conns.size(); i++) if(gene.conns[i].enable) indexes.push_back(i);
+    for(std::size_t i = 0; i < gene.conns.size(); i++) if(gene.conns[i].enable) indexes.push_back(i);
     if(indexes.empty()) return;
     auto j = indexes[random_generator::random<std::size_t>() % indexes.size()];
     gene.conns[j].enable = false;
@@ -66,8 +66,8 @@ void gene_pool_base::delete_node(network_information_base &gene) {
 
 void gene_pool_base::add_connection(network_information_base &gene) {
     std::vector<std::pair<std::uint32_t, std::uint32_t>> conn_pair(gene.node_num * (gene.node_num - 1));
-    for(auto i = 0, k = 0; i < gene.node_num; i++) {
-        for(auto j = 0; j < gene.node_num; j++) {
+    for(std::uint32_t i = 0, k = 0; i < gene.node_num; i++) {
+        for(std::uint32_t j = 0; j < gene.node_num; j++) {
             if(i == j) continue;
             conn_pair[k] = std::make_pair(gene.nodes[i].id, gene.nodes[j].id);
             k++;
