@@ -69,7 +69,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
         config.conn.resize(ni.conns.size());
         config.node.resize(ni.nodes.size());
         std::map<std::uint32_t, std::uint32_t> id_to_index;
-        for(auto i = 0; i < ni.nodes.size(); i++) id_to_index[ni.nodes[i].id] = i;
+        for(std::size_t i = 0; i < ni.nodes.size(); i++) id_to_index[ni.nodes[i].id] = i;
         std::transform(ni.conns.begin(), ni.conns.end(), config.conn.begin(),
                 [&id_to_index](const auto& c) {
             return c.enable ?
@@ -87,7 +87,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
         network_information<TNet, crossover_t, c1_t, c2_t, c3_t, n_t> n;
         pool->init_gene(n, config.num_inputs + config.num_outputs + config.num_hidden,
                         config.num_inputs, config.num_outputs);
-        for(auto i = 0; i < config.num_init_conns; i++) {
+        for(std::size_t i = 0; i < config.num_init_conns; i++) {
             pool->add_connection(n);
         }
         return n;

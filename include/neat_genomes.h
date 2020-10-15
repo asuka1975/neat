@@ -170,7 +170,7 @@ public:
 private:
     float dt;
     std::uint32_t elitism;
-    template <class T> class mapply_impl;
+    template <class T> struct mapply_impl;
     template <class T, class = void> struct has_distance : std::false_type {};
     template <class T> struct has_distance<T, std::void_t<decltype(T::distance)>> : std::true_type {};
     template <class T, class = void> struct distance_wrapper {
@@ -200,9 +200,9 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
     std::vector<float> fitness_updated(fitness.size());
     using index_t = typename std::vector<typename genetic::ga<TArgs...>::individual_t>::size_type;
     std::vector<std::vector<index_t>> specie(pop.size());
-    for(auto i = 0; i < pop.size(); i++) {
+    for(std::size_t i = 0; i < pop.size(); i++) {
         float f = 0.0f;
-        for(auto j = 0; j < pop.size(); j++) {
+        for(std::size_t j = 0; j < pop.size(); j++) {
             if(mapply_impl<std::index_sequence_for<TArgs...>>::mapply(pop[i], pop[j]) <= dt) {
                 f += 1.0f;
                 specie[i].push_back(j);
@@ -227,7 +227,7 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
         });
     }
 
-    for(auto i = 0; i < pop.size(); i++) {
+    for(std::size_t i = 0; i < pop.size(); i++) {
         if(i < elitism) {
             p[i] = pop[idx[i]];
             continue;
