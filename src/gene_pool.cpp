@@ -54,6 +54,7 @@ void gene_pool_base::add_node(network_information_base &gene) {
 
 void gene_pool_base::delete_node(network_information_base &gene) {
     auto hidden_num = gene.node_num - gene.input_num - gene.output_num;
+    if(hidden_num == 0) return;
     gene.node_num--;
 
     auto idx = random_generator::random<std::size_t>() % hidden_num + gene.input_num + gene.output_num;
@@ -96,6 +97,7 @@ void gene_pool_base::add_connection(network_information_base &gene) {
 }
 
 void gene_pool_base::delete_connection(network_information_base &gene) {
+    if(gene.conns.empty()) return;
     auto idx = random_generator::random<std::size_t>() % gene.conns.size();
     gene.conns.erase(gene.conns.begin() + idx);
 }
