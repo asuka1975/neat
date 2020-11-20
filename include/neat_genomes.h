@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <list>
+#include <nlohmann/json.hpp>
 #include "network.h"
 #include "random_generator.h"
 #include "ga.h"
@@ -25,6 +26,12 @@ struct connection {
     float weight;
     bool enable = true;
 };
+
+void to_json(nlohmann::json& j, const node& n);
+void from_json(const nlohmann::json& j, node& n);
+void to_json(nlohmann::json& j, const connection& n);
+void from_json(const nlohmann::json& j, connection& n);
+
 
 struct network_information_base {
     std::uint32_t node_num;
