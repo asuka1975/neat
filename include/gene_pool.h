@@ -5,6 +5,8 @@
 #ifndef NEAT_GENE_POOL_H
 #define NEAT_GENE_POOL_H
 
+#include <nlohmann/json.hpp>
+
 #include "neat_genomes.h"
 #include "graph_algorithm.h"
 #include "random_generator.h"
@@ -22,19 +24,24 @@ public:
     virtual void mutate_bias(float r, network_information_base& gene);
     virtual void mutate_weight(float r, network_information_base& gene);
     virtual ~gene_pool_base();
-protected:
-    float bias_init_mean;
-    float bias_init_stdev;
-    std::vector<std::function<float(float)>> activation_functions;
-    std::uint32_t push_gene(std::uint32_t in, std::uint32_t out);
     struct connection_gene {
         std::uint32_t id;
         std::uint32_t in;
         std::uint32_t out;
     };
+    void from_json(const nlohmann::json& j);
+    nlohmann::json to_json() const;
+protected:
+    float bias_init_mean;
+    float bias_init_stdev;
+    std::vector<std::function<float(float)>> activation_functions;
+    std::uint32_t push_gene(std::uint32_t in, std::uint32_t out);
     std::vector<connection_gene> genes;
     std::uint32_t node_count;
 };
+
+void to_json(nlohmann::json& j, const gene_pool_base::connection_gene& c);
+void from_json(const nlohmann::json& j, gene_pool_base::connection_gene& c);
 
 // recurrent genome pool
 template <class TNet, class = void>

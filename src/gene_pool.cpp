@@ -10,6 +10,8 @@
 
 #include "random_generator.h"
 
+using json = nlohmann::json;
+
 gene_pool_base::gene_pool_base(float bias_init_mean, float bias_init_stdev, std::vector<std::function<float(float)>> activation_functions) :
     bias_init_mean(bias_init_mean), bias_init_stdev(bias_init_stdev), activation_functions(std::move(activation_functions)) {
     node_count = 0;
@@ -139,6 +141,32 @@ std::uint32_t gene_pool_base::push_gene(std::uint32_t in, std::uint32_t out) {
     else {
         return iter->id;
     }
+}
+
+void to_json(json& j, const gene_pool_base::connection_gene& c) {
+    j = json {
+            { "id", c.id },
+            { "in", c.in },
+            { "out", c.out }
+    };
+}
+
+void from_json(const nlohmann::json& j, gene_pool_base::connection_gene& c) {
+    c.id = j.at("id").get<std::uint32_t>();
+    c.in = j.at("in").get<std::uint32_t>();
+    c.out = j.at("out").get<std::uint32_t>();
+}
+
+void gene_pool_base::from_json(const nlohmann::json &j) {
+    node_count = j.at("node_count").get<std::uint32_t>();
+    genes = j.at("conns").get<std::vector<connection_gene>>();
+}
+
+nlohmann::json gene_pool_base::to_json() const {
+    return nlohmann::json {
+            { "node_count", node_count },
+            { "conns", genes }
+    };
 }
 
 gene_pool_base::~gene_pool_base() = default;
