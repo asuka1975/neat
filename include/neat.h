@@ -60,7 +60,7 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
             std::is_invocable_r_v<std::size_t, decltype(&TNet::size), TNet>,
                     "TNet is not network. TNet must have input(std::vector<float>), get_outputs() and size().");
     using individual_t = typename genetic::ga<TArgs...>::individual_t;
-    config.pool = std::make_unique<gene_pool<TNet>>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
+    if(!config.pool) config.pool = std::make_unique<gene_pool<TNet>>(config.bias_init_mean, config.bias_init_stdev, config.activation_functions);
 
     gconfig.save = config.elitism;
     gconfig.scale = [](float x) { return x * x; };
