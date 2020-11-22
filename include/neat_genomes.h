@@ -45,6 +45,8 @@ struct network_information_base {
 void to_json(nlohmann::json& j, const network_information_base& n);
 void from_json(const nlohmann::json& j, network_information_base& n);
 
+void to_network_config(const network_information_base& ninfo, network_config& config);
+
 template <int Dig, int Dec> // alpha = 2.24 -> blx_alpha<2, 24>
 struct blx_alpha {
     static float crossover(float x, float y) {

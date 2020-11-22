@@ -54,3 +54,23 @@ void from_json(const nlohmann::json& j, network_information_base& n) {
     n.nodes = j.at("nodes").get<std::vector<node>>();
     n.conns = j.at("conns").get<std::vector<connection>>();
 }
+
+void to_network_config(const network_information_base& ni, network_config& config) {
+    config.input_num = ni.input_num;
+    config.output_num = ni.output_num;
+    config.conn.resize(ni.conns.size());
+    config.node.resize(ni.nodes.size());
+    std::map<std::uint32_t, std::uint32_t> id_to_index;
+    for(std::size_t i = 0; i < ni.nodes.size(); i++) id_to_index[ni.nodes[i].id] = i;
+    std::transform(ni.conns.begin(), ni.conns.end(), config.conn.begin(),
+                   [&id_to_index](const auto& c) {
+                       return c.enable ?
+                              std::make_tuple(id_to_index[c.in], id_to_index[c.out], c.weight) :
+                              std::make_tuple(0u, 0u, c.weight); });
+    auto iter = std::remove_if(config.conn.begin(), config.conn.end(),
+                               [](auto&& c) { return std::get<0>(c) == 0 && std::get<1>(c) == 0; });
+    config.conn.erase(iter, config.conn.end());
+    std::transform(ni.nodes.begin(), ni.nodes.end(), config.node.begin(),
+                   [](auto&& n) { return std::make_tuple(n.activation_function, n.bias); });
+    config.f = ni.activations;
+}
