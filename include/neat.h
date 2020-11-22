@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <nlohmann/json.hpp>
 #include "gene_pool.h"
 #include "genetic.h"
 #include "network.h"
@@ -38,6 +39,9 @@ struct neat_config {
 
     std::unique_ptr<gene_pool_base> pool;
 };
+
+void to_json(nlohmann::json& j, const neat_config& c);
+void from_json(const nlohmann::json& j, neat_config& c);
 
 template <class TNet, std::size_t I, class... TArgs>
 void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) {

@@ -42,6 +42,9 @@ struct network_information_base {
     std::vector<std::function<float(float)>> activations;
 };
 
+void to_json(nlohmann::json& j, const network_information_base& n);
+void from_json(const nlohmann::json& j, network_information_base& n);
+
 template <int Dig, int Dec> // alpha = 2.24 -> blx_alpha<2, 24>
 struct blx_alpha {
     static float crossover(float x, float y) {

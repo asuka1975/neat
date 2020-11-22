@@ -36,3 +36,21 @@ void from_json(const nlohmann::json& j, connection& n) {
     n.weight = j.at("weight").get<float>();
     n.enable = j.at("enable").get<bool>();
 }
+
+void to_json(nlohmann::json& j, const network_information_base& n) {
+    j = {
+            { "input_num", n.input_num },
+            { "output_num", n.output_num },
+            { "node_num", n.node_num },
+            { "nodes", n.nodes },
+            { "conns", n.conns }
+    };
+}
+
+void from_json(const nlohmann::json& j, network_information_base& n) {
+    n.input_num = j.at("input_num").get<std::uint32_t>();
+    n.output_num = j.at("output_num").get<std::uint32_t>();
+    n.node_num = j.at("node_num").get<std::uint32_t>();
+    n.nodes = j.at("nodes").get<std::vector<node>>();
+    n.conns = j.at("conns").get<std::vector<connection>>();
+}
