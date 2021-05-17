@@ -65,12 +65,12 @@ void to_network_config(const network_information_base& ni, network_config& confi
     std::transform(ni.conns.begin(), ni.conns.end(), config.conn.begin(),
                    [&id_to_index](const auto& c) {
                        return c.enable ?
-                              std::make_tuple(id_to_index[c.in], id_to_index[c.out], c.weight) :
-                              std::make_tuple(0u, 0u, c.weight); });
+                              conn_t { id_to_index[c.in], id_to_index[c.out], c.weight, nullptr } :
+                              conn_t { 0u, 0u, c.weight, nullptr }; });
     auto iter = std::remove_if(config.conn.begin(), config.conn.end(),
-                               [](auto&& c) { return std::get<0>(c) == 0 && std::get<1>(c) == 0; });
+                               [](auto&& c) { return c.in == 0 && c.out == 0; });
     config.conn.erase(iter, config.conn.end());
     std::transform(ni.nodes.begin(), ni.nodes.end(), config.node.begin(),
-                   [](auto&& n) { return std::make_tuple(n.activation_function, n.bias); });
+                   [](auto&& n) { return node_t { n.activation_function, n.bias, nullptr }; });
     config.f = ni.activations;
 }
