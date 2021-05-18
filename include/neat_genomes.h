@@ -17,6 +17,7 @@ struct node {
     std::uint32_t id;
     float bias;
     std::uint32_t activation_function;
+    std::any extra;
 };
 
 struct connection {
@@ -25,6 +26,7 @@ struct connection {
     std::uint32_t out;
     float weight;
     bool enable = true;
+    std::any extra;
 };
 
 void to_json(nlohmann::json& j, const node& n);
