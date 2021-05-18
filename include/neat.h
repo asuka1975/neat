@@ -14,6 +14,7 @@
 #include "network.h"
 #include "recurrent.h"
 #include "feedforward.h"
+#include "devnetwork.h"
 
 struct neat_config {
     std::uint32_t num_hidden;
@@ -77,6 +78,13 @@ void configure_neat(neat_config& config, genetic::ga_config<TArgs...>& gconfig) 
                         config.num_inputs, config.num_outputs);
         for(std::size_t i = 0; i < config.num_init_conns; i++) {
             pool->add_connection(n);
+        }
+        if(std::is_same_v<TNet, devnetwork> && devnet_extensions::enable_evolving_neurocomponents_position) {
+            for(node& nd : n.nodes) {
+                nd.extra = std::tuple<float, float>(
+                        random_generator::random_uniform<float>(-1, 1),
+                        random_generator::random_uniform<float>(-1, 1));
+            }
         }
         return n;
     };
