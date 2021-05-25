@@ -74,3 +74,13 @@ void to_network_config(const network_information_base& ni, network_config& confi
                    [](auto&& n) { return node_t { n.activation_function, n.bias, nullptr }; });
     config.f = ni.activations;
 }
+
+blx_alpha::blx_alpha(float a) : alpha(a) {}
+
+float blx_alpha::operator()(float x, float y) const {
+    float min = std::min(x, y);
+    float max = std::max(x, y);
+    float d = max - min;
+    min -= d * alpha; max += d * alpha;
+    return random_generator::random_uniform<float>(min, max);
+}
