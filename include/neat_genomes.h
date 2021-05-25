@@ -13,6 +13,19 @@
 #include "ga.h"
 #include "selector.h"
 
+struct neat_crossover_config {
+    std::function<float(float, float)> bias_crossover;
+    std::function<float(float, float)> weight_crossover;
+    struct distance_constant_t {
+        float c1;
+        float c2;
+        float c3;
+        float n;
+    } distance_constant;
+    std::function<std::any(std::any, std::any)> conn_any_crossover;
+    std::function<std::any(std::any, std::any)> node_any_crossover;
+};
+
 struct node {
     std::uint32_t id;
     float bias;
@@ -49,42 +62,19 @@ void from_json(const nlohmann::json& j, network_information_base& n);
 
 void to_network_config(const network_information_base& ninfo, network_config& config);
 
-template <int Dig, int Dec> // alpha = 2.24 -> blx_alpha<2, 24>
 struct blx_alpha {
-    static float crossover(float x, float y) {
-        constexpr float a = alpha();
-        float min = std::min(x, y);
-        float max = std::max(x, y);
-        float d = max - min;
-        min -= d * a; max += d * a;
-        return random_generator::random_uniform<float>(min, max);
-    }
-    static constexpr float alpha() {
-        int i = 1;
-        for(; Dec / i; i *= 10) ;
-        return Dig + static_cast<float>(Dec) / i;
-    }
+    explicit blx_alpha(float a);
+    float operator()(float x, float y) const;
+private:
+    float alpha;
 };
 
-template <int Dig, int Dec>
-struct literal_float_t {
-    static constexpr float value() {
-        int i = 1;
-        for(; Dec / i; i *= 10) ;
-        return Dig + static_cast<float>(Dec) / i;
-    }
-};
-
-template <class TNet, class TRealCrossover, class C1=literal_float_t<0,0>, class C2=literal_float_t<0,0>, class C3=literal_float_t<0,0>, class N=literal_float_t<1,0>>
+template <class TNet>
 struct network_information : network_information_base {
     using expression_t = TNet;
-    using real_crossover_t = TRealCrossover;
-    using c1_t = C1;
-    using c2_t = C2;
-    using c3_t = C3;
-    using n_t = N;
-    static network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t> crossover(const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d1, const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d2) {
-        network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t> d;
+    using crossover_config_type = neat_crossover_config;
+    static network_information<TNet> crossover(const network_information<TNet>& d1, const network_information<TNet>& d2, const neat_crossover_config& config) {
+        network_information<TNet> d;
         d.output_num = d1.output_num;
         d.input_num = d1.input_num;
         d.node_num = 0;
@@ -101,7 +91,10 @@ struct network_information : network_information_base {
                     j++;
                 } else {
                     node n_ = d1.nodes[i];
-                    n_.bias = TRealCrossover::crossover(d1.nodes[i].bias, d2.nodes[i].bias);
+                    n_.bias = config.bias_crossover(d1.nodes[i].bias, d2.nodes[i].bias);
+                    if(config.node_any_crossover) {
+                        n_.extra = config.node_any_crossover(d1.nodes[i].extra, d2.nodes[i].extra);
+                    }
                     d.nodes.push_back(n_);
                     i++, j++;
                 }
@@ -126,7 +119,10 @@ struct network_information : network_information_base {
                     j++;
                 } else {
                     connection c = d1.conns[i];
-                    c.weight = TRealCrossover::crossover(d1.conns[i].weight, d2.conns[i].weight);
+                    c.weight = config.weight_crossover(d1.conns[i].weight, d2.conns[i].weight);
+                    if(config.conn_any_crossover) {
+                        c.extra = config.conn_any_crossover(d1.conns[i].extra, d2.conns[i].extra);
+                    }
                     d.conns.push_back(c);
                     i++, j++;
                 }
@@ -140,11 +136,11 @@ struct network_information : network_information_base {
         }
         return d;
     }
-    static float distance(const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d1, const network_information<TNet, TRealCrossover, c1_t, c2_t, c3_t, n_t>& d2) {
-        constexpr float c1 = c1_t::value();
-        constexpr float c2 = c2_t::value();
-        constexpr float c3 = c3_t::value();
-        constexpr float n = n_t::value();
+    static float distance(const network_information<TNet>& d1, const network_information<TNet>& d2, const neat_crossover_config& config) {
+        float c1 = config.distance_constant.c1;
+        float c2 = config.distance_constant.c2;
+        float c3 = config.distance_constant.c3;
+        float n = config.distance_constant.n;
         std::size_t d = 0, e = 0, count = 0;
         float w = 0;
         for(std::size_t i = 0, j = 0; ; ) {
@@ -180,7 +176,7 @@ class species {
 public:
     explicit species(float dt, std::uint32_t elitism = 0);
     std::vector<typename genetic::ga<TArgs...>::individual_t>
-    operator()(const std::vector<typename genetic::ga<TArgs...>::individual_t>& pop, const std::vector<float>& fitness);
+    operator()(const std::vector<typename genetic::ga<TArgs...>::individual_t>& pop, const std::vector<float>& fitness, const std::tuple<typename TArgs::crossover_config_type...>&);
 private:
     float dt;
     std::uint32_t elitism;
@@ -188,18 +184,18 @@ private:
     template <class T, class = void> struct has_distance : std::false_type {};
     template <class T> struct has_distance<T, std::void_t<decltype(T::distance)>> : std::true_type {};
     template <class T, class = void> struct distance_wrapper {
-        static float distance(const T&, const T&) { return 0; }
+        static float distance(const T&, const T&, const typename T::crossover_config_type&) { return 0; }
     };
     template <class T> struct distance_wrapper<T, std::enable_if_t<has_distance<T>::value>> {
-        static float distance(const T& d1, const T& d2) { return T::distance(d1, d2); }
+        static float distance(const T& d1, const T& d2, const typename T::crossover_config_type& config) { return T::distance(d1, d2, config); }
     };
     template <size_t... I>
     struct mapply_impl<std::index_sequence<I...>> {
-        static float mapply(const typename genetic::ga<TArgs...>::individual_t& d1, const typename genetic::ga<TArgs...>::individual_t& d2) {
+        static float mapply(const typename genetic::ga<TArgs...>::individual_t& d1, const typename genetic::ga<TArgs...>::individual_t& d2, const std::tuple<typename TArgs::crossover_config_type...>& config) {
             static auto distance = [](std::initializer_list<float> args) -> float {
                 return std::sqrt(std::accumulate(args.begin(), args.end(), 0, [](float a, float b) { return a + b * b; }));
             };
-            return distance({distance_wrapper<typename std::tuple_element<I, std::tuple<TArgs...>>::type>::distance(std::get<I>(d1), std::get<I>(d2))...});
+            return distance({distance_wrapper<typename std::tuple_element<I, std::tuple<TArgs...>>::type>::distance(std::get<I>(d1), std::get<I>(d2), std::get<I>(config))...});
         }
     };
 };
@@ -209,7 +205,7 @@ inline species<TArgs...>::species(float dt, std::uint32_t elitism) : dt(dt), eli
 
 template <class... TArgs>
 inline std::vector<typename genetic::ga<TArgs...>::individual_t>
-species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::individual_t>& pop, const std::vector<float>& fitness) {
+species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::individual_t>& pop, const std::vector<float>& fitness, const std::tuple<typename TArgs::crossover_config_type...>& config) {
     std::vector<typename genetic::ga<TArgs...>::individual_t> p(pop.size());
     std::vector<float> fitness_updated(fitness.size());
     using index_t = typename std::vector<typename genetic::ga<TArgs...>::individual_t>::size_type;
@@ -217,7 +213,7 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
     for(std::size_t i = 0; i < pop.size(); i++) {
         float f = 0.0f;
         for(std::size_t j = 0; j < pop.size(); j++) {
-            if(mapply_impl<std::index_sequence_for<TArgs...>>::mapply(pop[i], pop[j]) <= dt) {
+            if(mapply_impl<std::index_sequence_for<TArgs...>>::mapply(pop[i], pop[j], config) <= dt) {
                 f += 1.0f;
                 specie[i].push_back(j);
             }
@@ -231,7 +227,7 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
     std::for_each(fitness_updated.begin(), fitness_updated.end(), [m=*std::min_element(fitness_updated.begin(), fitness_updated.end())](auto& x) {
         x -= m;
     });
-    if(float s = s=std::accumulate(fitness_updated.begin(), fitness_updated.end(), 0.0f); std::abs(s) < std::numeric_limits<float>::epsilon()) {
+    if(float s = std::accumulate(fitness_updated.begin(), fitness_updated.end(), 0.0f); std::abs(s) < std::numeric_limits<float>::epsilon()) {
         std::for_each(fitness_updated.begin(), fitness_updated.end(), [s=1.0f/p.size()] (auto& x) {
             x = s;
         });
@@ -268,7 +264,7 @@ species<TArgs...>::operator()(const std::vector<typename genetic::ga<TArgs...>::
                 }
                 range_ += fitness_updated[k];
             }
-            p[i] = genetic::crossover(pop[j], pop[k]);
+            p[i] = genetic::crossover(pop[j], pop[k], config);
         }
     }
     return p;
