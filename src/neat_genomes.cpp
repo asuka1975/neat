@@ -3,6 +3,13 @@
 //
 #include "neat_genomes.h"
 
+std::function<float(float, float)> create_real_crossover(const std::string& crossover_str, nlohmann::json param) {
+    if(crossover_str == "blx-alpha") {
+        return blx_alpha(param.get<float>());
+    }
+    return std::function<float(float, float)>{};
+}
+
 using json = nlohmann::json;
 
 void to_json(nlohmann::json& j, const node& n) {
@@ -53,6 +60,16 @@ void from_json(const nlohmann::json& j, network_information_base& n) {
     n.node_num = j.at("node_num").get<std::uint32_t>();
     n.nodes = j.at("nodes").get<std::vector<node>>();
     n.conns = j.at("conns").get<std::vector<connection>>();
+}
+
+void from_json(const nlohmann::json& j, neat_crossover_config& config) {
+    config.bias_crossover = create_real_crossover(j.at("bias_crossover")[0].get<std::string>(), j.at("bias_crossover")[1]);
+    config.weight_crossover = create_real_crossover(j.at("weight_crossover")[0].get<std::string>(), j.at("weight_crossover")[1]);
+    auto& dc = j.at("distance_constant");
+    config.distance_constant.c1 = dc.at("c1").get<float>();
+    config.distance_constant.c2 = dc.at("c2").get<float>();
+    config.distance_constant.c3 = dc.at("c3").get<float>();
+    config.distance_constant.n = dc.at("n").get<float>();
 }
 
 void to_network_config(const network_information_base& ni, network_config& config) {

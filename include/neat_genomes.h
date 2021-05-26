@@ -46,7 +46,7 @@ void to_json(nlohmann::json& j, const node& n);
 void from_json(const nlohmann::json& j, node& n);
 void to_json(nlohmann::json& j, const connection& n);
 void from_json(const nlohmann::json& j, connection& n);
-
+void from_json(const nlohmann::json& j, neat_crossover_config& config);
 
 struct network_information_base {
     std::uint32_t node_num;
