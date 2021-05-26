@@ -3,6 +3,13 @@
 //
 #include "neat_genomes.h"
 
+std::function<float(float, float)> create_real_crossover(const std::string& crossover_str, const nlohmann::json& param) {
+    if(crossover_str == "blx-alpha") {
+        return blx_alpha(param.get<float>());
+    }
+    return std::function<float(float, float)>{};
+}
+
 using json = nlohmann::json;
 
 void to_json(nlohmann::json& j, const node& n) {
@@ -55,6 +62,16 @@ void from_json(const nlohmann::json& j, network_information_base& n) {
     n.conns = j.at("conns").get<std::vector<connection>>();
 }
 
+void from_json(const nlohmann::json& j, neat_crossover_config& config) {
+    config.bias_crossover = create_real_crossover(j.at("bias_crossover")[0].get<std::string>(), j.at("bias_crossover")[1]);
+    config.weight_crossover = create_real_crossover(j.at("weight_crossover")[0].get<std::string>(), j.at("weight_crossover")[1]);
+    auto& dc = j.at("distance_constant");
+    config.distance_constant.c1 = dc.at("c1").get<float>();
+    config.distance_constant.c2 = dc.at("c2").get<float>();
+    config.distance_constant.c3 = dc.at("c3").get<float>();
+    config.distance_constant.n = dc.at("n").get<float>();
+}
+
 void to_network_config(const network_information_base& ni, network_config& config) {
     config.input_num = ni.input_num;
     config.output_num = ni.output_num;
@@ -65,12 +82,22 @@ void to_network_config(const network_information_base& ni, network_config& confi
     std::transform(ni.conns.begin(), ni.conns.end(), config.conn.begin(),
                    [&id_to_index](const auto& c) {
                        return c.enable ?
-                              std::make_tuple(id_to_index[c.in], id_to_index[c.out], c.weight) :
-                              std::make_tuple(0u, 0u, c.weight); });
+                              conn_t { id_to_index[c.in], id_to_index[c.out], c.weight, nullptr } :
+                              conn_t { 0u, 0u, c.weight, nullptr }; });
     auto iter = std::remove_if(config.conn.begin(), config.conn.end(),
-                               [](auto&& c) { return std::get<0>(c) == 0 && std::get<1>(c) == 0; });
+                               [](auto&& c) { return c.in == 0 && c.out == 0; });
     config.conn.erase(iter, config.conn.end());
     std::transform(ni.nodes.begin(), ni.nodes.end(), config.node.begin(),
-                   [](auto&& n) { return std::make_tuple(n.activation_function, n.bias); });
+                   [](auto&& n) { return node_t { n.activation_function, n.bias, nullptr }; });
     config.f = ni.activations;
+}
+
+blx_alpha::blx_alpha(float a) : alpha(a) {}
+
+float blx_alpha::operator()(float x, float y) const {
+    float min = std::min(x, y);
+    float max = std::max(x, y);
+    float d = max - min;
+    min -= d * alpha; max += d * alpha;
+    return random_generator::random_uniform<float>(min, max);
 }

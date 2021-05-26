@@ -30,8 +30,14 @@ namespace {
         };
         config.elitism = 1;
         config.dt = 1.0f;
+        config.crossover_config.bias_crossover = blx_alpha { 0.5 };
+        config.crossover_config.weight_crossover = blx_alpha { 0.5 };
+        config.crossover_config.distance_constant.c1 = 0.5;
+        config.crossover_config.distance_constant.c2 = 0.5;
+        config.crossover_config.distance_constant.c3 = 0.5;
+        config.crossover_config.distance_constant.n = 0.5;
 
-        using network_information = network_information<recurrent, blx_alpha<0, 5>, literal_float_t<0,5>, literal_float_t<0,5>, literal_float_t<0,5>>;
+        using network_information = network_information<recurrent>;
         genetic::ga_config<network_information> gconfig;
         configure_neat<recurrent, 0>(config, gconfig);
         gconfig.step = [](const std::vector<genetic::ga_config<network_information>::expression_t>& p) {
@@ -67,13 +73,6 @@ namespace {
         gconfig.fitness_max = 4.0f;
         genetic::ga<network_information> ga(gconfig);
         ga.run();
-    }
-
-    TEST(ALGORITHM_TEST, FLOAT) {
-        EXPECT_FLOAT_EQ((blx_alpha<2, 24>::alpha()), 2.24f);
-        EXPECT_FLOAT_EQ((blx_alpha<0, 24>::alpha()), 0.24f);
-        EXPECT_FLOAT_EQ((blx_alpha<0, 324>::alpha()), 0.324f);
-        EXPECT_FLOAT_EQ((blx_alpha<20, 324>::alpha()), 20.324f);
     }
 }
 
