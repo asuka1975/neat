@@ -3,7 +3,7 @@
 //
 #include "neat_genomes.h"
 
-std::function<float(float, float)> create_real_crossover(const std::string& crossover_str, nlohmann::json param) {
+std::function<float(float, float)> create_real_crossover(const std::string& crossover_str, const nlohmann::json& param) {
     if(crossover_str == "blx-alpha") {
         return blx_alpha(param.get<float>());
     }
